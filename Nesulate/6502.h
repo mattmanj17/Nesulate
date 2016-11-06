@@ -44,6 +44,13 @@ private:
 		return halfAt(0xFFFC);
 	}
 
+	// BRK/interrupt request handler
+
+	half pIRQHandler()
+	{
+		return halfAt(0xFFFE);
+	}
+
 	// registers
 	
 	half pc;
@@ -94,63 +101,62 @@ private:
 
 enum OpCode : byte
 {
-	OP_ADC,
-	OP_AND,
-	OP_ASL,
-	OP_BBC,
-	OP_BCS,
-	OP_BEQ,
-	OP_BIT,
-	OP_BMI,
-	OP_BNE,
-	OP_BPL,
-	OP_BRK,
-	OP_BVC,
-	OP_BVS,
-	OP_BVS,
-	OP_CLC,
-	OP_CLD,
-	OP_CLI,
-	OP_CLV,
-	OP_CMP,
-	OP_CPX,
-	OP_CPY,
-	OP_DEC,
-	OP_DEX,
-	OP_DEY,
-	OP_EOR,
-	OP_INC,
-	OP_INX,
-	OP_INY,
-	OP_JMP,
-	OP_JSR,
-	OP_LDA,
-	OP_LDX,
-	OP_LDY,
-	OP_LSR,
-	OP_NOP,
-	OP_ORA,
-	OP_PHA,
-	OP_PHP,
-	OP_PLA,
-	OP_PLP,
-	OP_ROL,
-	OP_ROR,
-	OP_RTI,
-	OP_RTS,
-	OP_SBC,
-	OP_SEC,
-	OP_SED,
-	OP_SEI,
-	OP_STA,
-	OP_STX,
-	OP_STY,
-	OP_TAX,
-	OP_TAY,
-	OP_TSX,
-	OP_TXA,
-	OP_TXS,
-	OP_TYA,
+	OP_ADC, // Add with Carry
+	OP_AND, // Logical AND
+	OP_ASL, // Arithmetic Shift Left
+	OP_BBC, // Branch if Carry Clear
+	OP_BCS, // Branch if Carry Set
+	OP_BEQ, // Branch if Equal
+	OP_BIT, // Bit Test
+	OP_BMI, // Branch if Minus
+	OP_BNE, // Branch if Not Equal
+	OP_BPL, // Branch if Positive
+	OP_BRK, // Force Interrupt
+	OP_BVC, // Branch if Overflow Clear
+	OP_BVS, // Branch if Overflow Set
+	OP_CLC, // Clear Carry Flag
+	OP_CLD, // Clear Decimal Mode
+	OP_CLI, // Clear Interrupt Disable
+	OP_CLV, // Clear Overflow Flag
+	OP_CMP, // Compare
+	OP_CPX, // Compare X Register
+	OP_CPY, // Compare Y Register
+	OP_DEC, // Decrement Memory
+	OP_DEX, // Decrement X Register
+	OP_DEY, // Decrement Y Register
+	OP_EOR, // Exclusive OR
+	OP_INC, // Increment Memory
+	OP_INX, // Increment X Register
+	OP_INY, // Increment Y Register
+	OP_JMP, // Jump
+	OP_JSR, // Jump to Subroutine
+	OP_LDA, // Load Accumulator
+	OP_LDX, // Load X Register
+	OP_LDY, // Load Y Register
+	OP_LSR, // Logical Shift Right
+	OP_NOP, // NOP
+	OP_ORA, // Logical Inclusive OR
+	OP_PHA, // Push Accumulator
+	OP_PHP, // Push Processor Status
+	OP_PLA, // Pull Accumulator
+	OP_PLP, // Pull Processor Status
+	OP_ROL, // Rotate Left
+	OP_ROR, // Rotate Right
+	OP_RTI, // Return from Interrupt
+	OP_RTS, // Return from Subroutine
+	OP_SBC, // Subtract with Carry
+	OP_SEC, // Set Carry Flag
+	OP_SED, // Set Decimal Flag
+	OP_SEI, // Set Interrupt Disable
+	OP_STA, // Store Accumulator
+	OP_STX, // Store X Register
+	OP_STY, // Store Y Register
+	OP_TAX, // Transfer Accumulator to X
+	OP_TAY, // Transfer Accumulator to Y
+	OP_TSX, // Transfer Stack Pointer to X
+	OP_TXA, // Transfer X to Accumulator
+	OP_TXS, // Transfer X to Stack Pointer
+	OP_TYA, // Transfer Y to Accumulator
 
 	OP_INVALID,
 };
@@ -159,19 +165,19 @@ enum OpCode : byte
 
 enum AddresingMode : byte
 {
-	AM_Imp,
-	AM_Acc,
-	AM_Imm,
-	AM_ZP,
-	AM_ZPX,
-	AM_ZPY,
-	AM_Rel,
-	AM_Abs,
-	AM_AbsX,
-	AM_AbsY,
-	AM_Ind,
-	AM_IndX,
-	AM_IndY
+	AM_Imp,		// Implicit
+	AM_Acc,		// Accumulator
+	AM_Imm,		// Immediate
+	AM_ZP,		// Zero Page
+	AM_ZPX,		// Zero Page, X
+	AM_ZPY,		// Zero Page, Y
+	AM_Rel,		// Relative
+	AM_Abs,		// Absolute
+	AM_AbsX,	// Absolute, X
+	AM_AbsY,	// Absolute, Y
+	AM_Ind,		// Indirect
+	AM_IndX,	// Indirect, X
+	AM_IndY		// Indirect, Y
 };
 
 struct IntructionInfo
