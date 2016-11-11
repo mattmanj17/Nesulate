@@ -104,7 +104,7 @@ enum OpCode : byte
 	OP_ADC, // Add with Carry
 	OP_AND, // Logical AND
 	OP_ASL, // Arithmetic Shift Left
-	OP_BBC, // Branch if Carry Clear
+	OP_BCC, // Branch if Carry Clear
 	OP_BCS, // Branch if Carry Set
 	OP_BEQ, // Branch if Equal
 	OP_BIT, // Bit Test
@@ -204,19 +204,19 @@ const IntructionInfo aryInstI[256] =
 	/*5x*/{ OP_BVC, AM_Rel  }, { OP_EOR, AM_IndY }, INST_INVALID_______, INST_INVALID_______, INST_INVALID_______, { OP_EOR, AM_ZPX  }, { OP_LSR, AM_ZPX  }, INST_INVALID_______, { OP_CLI, AM_Imp  }, { OP_EOR, AM_AbsY }, INST_INVALID_______, INST_INVALID_______, INST_INVALID_______, { OP_EOR, AM_AbsX }, { OP_LSR, AM_AbsX }, INST_INVALID_______,
 	/*6x*/{ OP_RTS, AM_Imp  }, { OP_ADC, AM_IndX }, INST_INVALID_______, INST_INVALID_______, INST_INVALID_______, { OP_ADC, AM_ZP   }, { OP_ROR, AM_ZP   }, INST_INVALID_______, { OP_PLA, AM_Imp  }, { OP_ADC, AM_Imm  }, { OP_ROR, AM_Acc  }, INST_INVALID_______, { OP_JMP, AM_Ind  }, { OP_ADC, AM_Abs  }, { OP_ROR, AM_Abs  }, INST_INVALID_______,
 	/*7x*/{ OP_BVS, AM_Rel  }, { OP_ADC, AM_IndY }, INST_INVALID_______, INST_INVALID_______, INST_INVALID_______, { OP_ADC, AM_ZPX  }, { OP_ROR, AM_ZPX  }, INST_INVALID_______, { OP_SEI, AM_Imp  }, { OP_ADC, AM_AbsY }, INST_INVALID_______, INST_INVALID_______, INST_INVALID_______, { OP_ADC, AM_AbsX }, { OP_ROR, AM_AbsX }, INST_INVALID_______,
-	/*8x*/
-	/*9x*/
-	/*Ax*/
-	/*Bx*/
-	/*Cx*/
-	/*Dx*/
-	/*Ex*/
-	/*Fx*/
+	/*8x*/INST_INVALID_______, { OP_STA, AM_IndX }, INST_INVALID_______, INST_INVALID_______, { OP_STY, AM_ZP   }, { OP_STA, AM_ZP   }, { OP_STX, AM_ZP   }, INST_INVALID_______, { OP_DEY, AM_Imp  }, INST_INVALID_______, { OP_TXA, AM_Imp  }, INST_INVALID_______, { OP_STY, AM_Abs  }, { OP_STA, AM_Abs  }, { OP_STX, AM_Abs  }, INST_INVALID_______,
+	/*9x*/{ OP_BCC, AM_Rel  }, { OP_STY, AM_IndY }, INST_INVALID_______, INST_INVALID_______, { OP_STY, AM_ZPX  }, { OP_STA, AM_ZPX  }, { OP_STX, AM_ZPY  }, INST_INVALID_______, { OP_TYA, AM_Imp  }, { OP_STA, AM_AbsY }, { OP_TXS, AM_Imp  }, INST_INVALID_______, INST_INVALID_______, { OP_STA, AM_AbsX }, INST_INVALID_______, INST_INVALID_______,
+	/*Ax*/{ OP_LDY, AM_Imm  }, { OP_LDA, AM_IndX }, { OP_LDX, AM_Imm  }, INST_INVALID_______, { OP_LDY, AM_ZP   }, { OP_LDA, AM_ZP   }, { OP_LDX, AM_ZP   }, INST_INVALID_______, { OP_TAY, AM_Imp  }, { OP_LDA, AM_Imm  }, { OP_TAX, AM_Imp  }, INST_INVALID_______, { OP_LDY, AM_Abs  }, { OP_LDA, AM_Abs  }, { OP_LDX, AM_Abs  }, INST_INVALID_______,
+	/*Bx*/{ OP_BCS, AM_Rel  }, { OP_LDA, AM_IndY }, INST_INVALID_______, INST_INVALID_______, { OP_LDY, AM_ZPX  }, { OP_LDA, AM_ZPX  }, { OP_LDX, AM_ZPY  }, INST_INVALID_______, { OP_CLV, AM_Imp  }, { OP_LDA, AM_AbsY }, { OP_TSX, AM_Imp  }, INST_INVALID_______, { OP_LDY, AM_AbsX }, { OP_LDA, AM_AbsX }, { OP_LDX, AM_AbsY }, INST_INVALID_______,
+	/*Cx*/{ OP_CPY, AM_Imm  }, { OP_CMP, AM_IndX }, INST_INVALID_______, INST_INVALID_______, { OP_CPY, AM_ZP   }, { OP_CMP, AM_ZP   }, { OP_DEC, AM_ZP   }, INST_INVALID_______, { OP_INY, AM_Imp  }, { OP_CMP, AM_Imm  }, { OP_DEX, AM_Imp  }, INST_INVALID_______, { OP_CPY, AM_Abs  }, { OP_CMP, AM_Abs  }, { OP_DEC, AM_Abs  }, INST_INVALID_______,
+	/*Dx*/{ OP_BNE, AM_Rel  }, { OP_CMP, AM_IndY }, INST_INVALID_______, INST_INVALID_______, INST_INVALID_______, { OP_CMP, AM_ZPX  }, { OP_DEC, AM_ZPX  }, INST_INVALID_______, { OP_CLD, AM_Imp  }, { OP_CMP, AM_AbsY }, INST_INVALID_______, INST_INVALID_______, INST_INVALID_______, { OP_CMP, AM_AbsX }, { OP_DEC, AM_AbsX }, INST_INVALID_______,
+	/*Ex*/{ OP_CPX, AM_Imm  }, { OP_SBC, AM_IndX }, INST_INVALID_______, INST_INVALID_______, { OP_CPX, AM_ZP   }, { OP_SBC, AM_ZP   }, { OP_INC, AM_ZP   }, INST_INVALID_______, { OP_INX, AM_Imp  }, { OP_SBC, AM_Imm  }, { OP_NOP, AM_Imp  }, INST_INVALID_______, { OP_CPX, AM_Abs  }, { OP_SBC, AM_Abs  }, { OP_INC, AM_Abs  }, INST_INVALID_______,
+	/*Fx*/{ OP_BEQ, AM_Rel  }, { OP_SBC, AM_IndY }, INST_INVALID_______, INST_INVALID_______, INST_INVALID_______, { OP_SBC, AM_ZPX  }, { OP_INC, AM_ZPX  }, INST_INVALID_______, { OP_SED, AM_Imp  }, { OP_SBC, AM_AbsY }, INST_INVALID_______, INST_INVALID_______, INST_INVALID_______, { OP_SBC, AM_AbsX }, { OP_INC, AM_AbsX }, INST_INVALID_______,
 };
 
 #undef INST_INVALID
 
-const IntructionInfo * InstIFromByte(byte instruction)
+const IntructionInfo InstIFromByte(byte instruction)
 {
-	return &(aryInstI[instruction]);
+	return aryInstI[instruction];
 }
