@@ -94,7 +94,219 @@ private:
 		StatusFlag_Negative			= 1 << 7,
 	};
 
-	byte status;
+	byte status = 0x20;
+
+	void Cycle()
+	{
+		IntructionInfo insti = InstiFromByte(ram[pc]);
+
+		// get the address provided by the addressing mode
+
+		half addrAm = addrFromAm(insti.am);
+
+		switch (insti.op)
+		{
+		case OP_ADC:
+			byte mem = ram [addrAm];
+
+			half sum = (half)acc + (half)mem;
+
+			acc = (byte)sum;
+
+			if(sum > 0xFF)		status |= StatusFlag_Carry;
+			if(!acc)			status |= StatusFlag_Zero;
+			if(acc & (1 << 7))  status |= StatusFlag_Negative;
+
+			// update pc
+
+			break;
+		case OP_AND:
+			byte mem = ram [addrAm];
+
+			acc = acc & mem;
+
+			if(!acc)			status |= StatusFlag_Zero;
+			if(acc & (1 << 7))  status |= StatusFlag_Negative;
+
+			// update pc
+
+			break;
+		case OP_ASL:
+			byte val = insti.am == AM_Acc ? acc : ram [addrAm];
+
+			if(val & (1 << 7))	status |= StatusFlag_Carry;
+			else				status &= ~StatusFlag_Carry;
+
+			val <<= 1;
+
+			if(!val)			status |= StatusFlag_Zero;
+			if(val & (1 << 7))  status |= StatusFlag_Negative;
+
+			if(insti.am == AM_Acc)	acc = val;
+			else					ram [addrAm] = val;
+
+			// update pc
+
+			break;
+		case OP_BCC:
+			if(!(status & StatusFlag_Carry)) pc = addrAm;
+			else pc += 1;
+			break;
+		case OP_BCS:
+			if(status & StatusFlag_Carry) pc = addrAm;
+			else pc += 1;
+			break;
+		case OP_BEQ:
+			if(status & StatusFlag_Zero) pc = addrAm;
+			else pc += 1;
+			break;
+		case OP_BIT:
+			byte mem = ram [addrAm];
+			byte test = mem & acc;
+
+			if(!test) status |= StatusFlag_Zero;
+
+			if(val & (1 << 6))	status |= StatusFlag_Overflow;
+			else				status &= ~StatusFlag_Overflow;
+
+			if(val & (1 << 7))	status |= StatusFlag_Negative;
+			else				status &= ~StatusFlag_Negative;
+
+			// update pc
+
+			break;
+		case OP_BMI:
+			if(status & StatusFlag_Negative) pc = addrAm;
+			else pc += 1;
+			break;
+		case OP_BNE:
+			if(!(status & StatusFlag_Zero)) pc = addrAm;
+			else pc += 1;
+			break;
+		case OP_BPL:
+			if(!(status & StatusFlag_Negative)) pc = addrAm;
+			else pc += 1;
+			break;
+		case OP_BRK:
+			ram[sp] = pc;
+			ram[sp + 1] = status;
+			sp += 2;
+			status |= StatusFlag_PushSource;
+			pc = pIRQHandler();
+			break;
+		case OP_BVC:
+			if(!(status & StatusFlag_Overflow)) pc = addrAm;
+			else pc += 1;
+			break;
+		case OP_BVS:
+			if(status & StatusFlag_Overflow) pc = addrAm;
+			else pc += 1;
+			break;
+		case OP_CLC:
+			status &= ~StatusFlag_Carry;
+			// update pc
+			break;
+		case OP_CLD:
+			status &= ~StatusFlag_Decimal;
+			// update pc
+			break;
+		case OP_CLI:
+			status &= ~StatusFlag_InteruptDisable;
+			// update pc
+			break;
+		case OP_CLV:
+			status &= ~StatusFlag_Overflow;
+			// update pc
+			break;
+		case OP_CMP:
+			byte mem = ram[addrAm];
+			byte diff = acc - mem;
+
+			if(acc >= mem) status |= StatusFlag_Carry;
+			if(acc == mem) status |= StatusFlag_Zero;
+
+			if(diff & (1 << 7))	status |= StatusFlag_Negative;
+			else				status &= ~StatusFlag_Negative;
+
+			// update pc
+
+			break;
+		case OP_CPX:
+			byte mem = ram[addrAm];
+			byte diff = iX - mem;
+
+			if(iX >= mem) status |= StatusFlag_Carry;
+			if(iX == mem) status |= StatusFlag_Zero;
+
+			if(diff & (1 << 7))	status |= StatusFlag_Negative;
+			else				status &= ~StatusFlag_Negative;
+
+			// update pc
+
+			break;
+		case OP_CPY:
+			byte mem = ram[addrAm];
+			byte diff = iY - mem;
+
+			if(iY >= mem) status |= StatusFlag_Carry;
+			if(iY == mem) status |= StatusFlag_Zero;
+
+			if(diff & (1 << 7))	status |= StatusFlag_Negative;
+			else				status &= ~StatusFlag_Negative;
+
+			// update pc
+
+			break;
+		}
+
+		
+	}
+
+	half addrFromAm(AddresingMode am)
+	{
+		switch (am)
+		{
+		case AM_Imp:
+		case AM_Acc:
+			return 0x0000;
+			break;
+		case AM_Imm:
+			return pc + 1;
+			break;
+		case AM_ZP:
+			return ram[pc + 1];
+			break;
+		case AM_ZPX:
+			return (ram[pc + 1] + iX) % 0x100;
+			break;
+		case AM_ZPY:
+			return (ram[pc + 1] + iY) % 0x100;
+			break;
+		case AM_Rel:
+			return pc + ((sbyte)ram[pc + 1]) + 2;
+			break;
+		case AM_Abs:
+			return halfAt(pc + 1);
+			break;
+		case AM_AbsX:
+			return halfAt(pc + 1) + iX;
+			break;
+		case AM_AbsY:
+			return halfAt(pc + 1) + iY;
+			break;
+		case AM_Ind:
+			return halfAt(halfAt(pc + 1));
+			break;
+		case AM_IndX:
+			return (ram[pc + 1] + iX) % 0x100;
+			break;
+		case AM_IndY:
+			return halfAt(ram[pc + 1]) + iY;
+			break;
+		default:
+			break;
+		}
+	}
 };
 
 // http://www.obelisk.me.uk/6502/reference.html
@@ -190,7 +402,7 @@ struct IntructionInfo
 
 // lookup table that converts from byte to opcode and addressing mode
 
-const IntructionInfo aryInstI[256] =
+const IntructionInfo aryInsti[256] =
 {
 	// http://www.llx.com/~nparker/a2/opcodes.html
 	// http://www.obelisk.me.uk/6502/reference.html
@@ -216,7 +428,7 @@ const IntructionInfo aryInstI[256] =
 
 #undef INST_INVALID
 
-const IntructionInfo InstIFromByte(byte instruction)
+const IntructionInfo InstiFromByte(byte instruction)
 {
-	return aryInstI[instruction];
+	return aryInsti[instruction];
 }
