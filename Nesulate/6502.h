@@ -1,4 +1,5 @@
 #include "Types.h"
+#include <cassert>
 
 
 //http://www.obelisk.me.uk/6502/index.html
@@ -54,7 +55,8 @@ private:
 	// registers
 	
 	half pc;
-	half sp = 0x01FF; // intitaly points to begining of stack. decremented on push, incremented on pop
+	half sp = 0x01FF;	// points to next free location on the stack. 
+						//intitaly points to beggining (top) of stack. decremented on push, incremented on pop. 
 	byte acc;
 	byte iX;
 	byte iY;
@@ -109,7 +111,7 @@ private:
 		case OP_ADC:
 			byte mem = ram [addrAm];
 
-			half sum = (half)acc + (half)mem;
+			half sum = (half)acc + (half)mem + (status & StatusFlag_Carry) ? 1 : 0;
 
 			acc = (byte)sum;
 
@@ -189,8 +191,8 @@ private:
 			break;
 		case OP_BRK:
 			ram[sp] = pc;
-			ram[sp + 1] = status;
-			sp += 2;
+			ram[sp - 1] = status;
+			sp -= 2;
 			status |= StatusFlag_PushSource;
 			pc = pIRQHandler();
 			break;
@@ -257,9 +259,294 @@ private:
 			// update pc
 
 			break;
-		}
+		case OP_DEC:
+			byte mem = ram[addrAm];
+			byte result = mem - 1;
 
-		
+			if(!result) status |= StatusFlag_Zero;
+
+			if(result & (1 << 7))	status |= StatusFlag_Negative;
+			else					status &= ~StatusFlag_Negative;
+
+			ram[addrAm] = result;
+
+			// update pc
+			break;
+		case OP_DEX:
+			byte val = iX;
+			byte result = val - 1;
+
+			if(!result) status |= StatusFlag_Zero;
+
+			if(result & (1 << 7))	status |= StatusFlag_Negative;
+			else					status &= ~StatusFlag_Negative;
+
+			iX = result;
+
+			// update pc
+			break;
+		case OP_DEY:
+			byte val = iY;
+			byte result = val - 1;
+
+			if(!result) status |= StatusFlag_Zero;
+
+			if(result & (1 << 7))	status |= StatusFlag_Negative;
+			else					status &= ~StatusFlag_Negative;
+
+			iY = result;
+
+			// update pc
+			break;
+		case OP_EOR:
+			byte mem = ram[addrAm];
+			acc ^= mem;
+
+			if(!acc) status |= StatusFlag_Zero;
+
+			if(acc & (1 << 7))	status |= StatusFlag_Negative;
+			else					status &= ~StatusFlag_Negative;
+
+			// update pc
+			break;
+		case OP_INC:
+			byte mem = ram[addrAm];
+			byte result = mem + 1;
+
+			if(!result) status |= StatusFlag_Zero;
+
+			if(result & (1 << 7))	status |= StatusFlag_Negative;
+			else					status &= ~StatusFlag_Negative;
+
+			ram[addrAm] = result;
+
+			// update pc
+			break;
+		case OP_INX:
+			byte val = iX;
+			byte result = val + 1;
+
+			if(!result) status |= StatusFlag_Zero;
+
+			if(result & (1 << 7))	status |= StatusFlag_Negative;
+			else					status &= ~StatusFlag_Negative;
+
+			iX = result;
+
+			// update pc
+			break;
+		case OP_INY:
+			byte val = iY;
+			byte result = val + 1;
+
+			if(!result) status |= StatusFlag_Zero;
+
+			if(result & (1 << 7))	status |= StatusFlag_Negative;
+			else					status &= ~StatusFlag_Negative;
+
+			iY = result;
+
+			// update pc
+			break;
+		case OP_JMP:
+			pc = addrAm;
+			break;
+		case OP_JSR:
+			ram[sp] = pc;
+			sp--;
+			pc = addrAm;
+			break;
+		case OP_LDA:
+			acc = ram[addrAm];
+
+			if(!acc) status |= StatusFlag_Zero;
+
+			if(acc & (1 << 7))	status |= StatusFlag_Negative;
+			else					status &= ~StatusFlag_Negative;
+
+			//updatepc
+			break;
+		case OP_LDX:
+			iX = ram[addrAm];
+
+			if(!iX) status |= StatusFlag_Zero;
+
+			if(iX & (1 << 7))	status |= StatusFlag_Negative;
+			else					status &= ~StatusFlag_Negative;
+
+			//updatepc
+			break;
+		case OP_LDY:
+			iY = ram[addrAm];
+
+			if(!iY) status |= StatusFlag_Zero;
+
+			if(iY & (1 << 7))	status |= StatusFlag_Negative;
+			else					status &= ~StatusFlag_Negative;
+
+			//updatepc
+			break;
+		case OP_LSR:
+			byte val = insti.am == AM_Acc ? acc : ram[addrAm];
+
+			if(val & 1) status |= StatusFlag_Carry;
+			else	status &= ~StatusFlag_Carry;
+
+			val >> 1;
+
+			if(!val) status |= StatusFlag_Zero;
+
+			// negative: Set if bit 7 of the result is set ???
+
+			if(insti.am == AM_Acc) acc = val;
+			else ram[addrAm] = val;
+
+			//updatepc
+			break;
+		case OP_NOP:
+			//updatepc
+			break;
+		case OP_ORA:
+			acc |= ram[addrAm];
+
+			if(!acc) status |= StatusFlag_Zero;
+
+			if(acc & (1 << 7))	status |= StatusFlag_Negative;
+			else					status &= ~StatusFlag_Negative;
+
+			//updatepc
+			break;
+		case OP_PHA:
+			ram[sp] = acc;
+			sp--;
+			//pc
+			break;
+		case OP_PHP:
+			ram[sp] = status;
+			sp--;
+			//pc
+			break;
+		case OP_PLA:
+			sp++;
+			acc = ram[sp];
+			//poc
+			break;
+		case OP_PLP:
+			sp++;
+			status = ram[sp];
+			//pc
+			break;
+		case OP_ROL:
+			byte val = insti.am == AM_Acc ? acc : ram[addrAm];
+			bool oldBitSeven = (val & (1 << 7)) ? true : false;
+			val << 1;
+
+			if(status & StatusFlag_Carry) val |= 1;
+
+			if(oldBitSeven) status |= StatusFlag_Carry;
+			else status &= ~StatusFlag_Carry;
+
+			if(!val) status |= StatusFlag_Zero;
+
+			if(insti.am == AM_Acc) acc = val;
+			else ram[addrAm] = val;
+			//pc
+			break;
+		case OP_ROR:
+			byte val = insti.am == AM_Acc ? acc : ram[addrAm];
+			bool oldBitZero = (val & 1) ? true : false;
+			val >> 1;
+
+			if(status & StatusFlag_Carry) val |= (1 << 7);
+
+			if(oldBitZero) status |= StatusFlag_Carry;
+			else status &= ~StatusFlag_Carry;
+
+			if(!val) status |= StatusFlag_Zero;
+
+			if(insti.am == AM_Acc) acc = val;
+			else ram[addrAm] = val;
+			//pc
+			break;
+		case OP_RTI:
+			sp++;
+			status = ram[sp];
+			sp++;
+			pc = ram[sp];
+			//pc
+			break;
+		case OP_RTS:
+			sp++;
+			pc = ram[sp];
+			//pc
+			break;
+		case OP_SBC:
+			byte mem = ram [addrAm];
+			byte negMem = ~mem + 1; // twos complement
+
+			half sum = (half)acc + (half)negMem + (status & StatusFlag_Carry) ? 1 : 0;
+
+			acc = (byte)sum;
+
+			if(sum > 0xFF)		status |= StatusFlag_Carry;
+			if(!acc)			status |= StatusFlag_Zero;
+			if(acc & (1 << 7))  status |= StatusFlag_Negative;
+
+			// update pc
+
+			break;
+		case OP_SEC:
+			status |= StatusFlag_Carry;
+			//pc
+			break;
+		case OP_SED:
+			status |= StatusFlag_Decimal;
+			//pc
+			break;
+		case OP_SEI:
+			status |= StatusFlag_InteruptDisable;
+			//pc
+			break;
+		case OP_STA:
+			ram[addrAm] = acc;
+			//pc
+			break;
+		case OP_STX:
+			ram[addrAm] = iX;
+			//pc
+			break;
+		case OP_STY:
+			ram[addrAm] = iY;
+			//pc
+			break;
+		case OP_TAX:
+			iX = acc;
+			//pc
+			break;
+		case OP_TAY:
+			iY = acc;
+			//pc
+			break;
+		case OP_TSX:
+			iX = sp;
+			//pc
+			break;
+		case OP_TXA:
+			acc = iX;
+			//pc
+			break;
+		case OP_TXS:
+			sp = iX;
+			//PC
+			break;
+		case OP_TYA:
+			acc = iY;
+			//pc
+			break;
+		default:
+			assert(false);
+			break;
+		}
 	}
 
 	half addrFromAm(AddresingMode am)
