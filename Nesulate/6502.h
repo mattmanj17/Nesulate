@@ -108,48 +108,163 @@ private:
 
 		switch (insti.op)
 		{
+		
+		// one mem read
+
 		case OP_ADC:
 			byte mem = ram [addrAm];
-
 			half sum = (half)acc + (half)mem + (status & StatusFlag_Carry) ? 1 : 0;
-
 			acc = (byte)sum;
-
 			if(sum > 0xFF)		status |= StatusFlag_Carry;
 			if(!acc)			status |= StatusFlag_Zero;
 			if(acc & (1 << 7))  status |= StatusFlag_Negative;
-
-			// update pc
-
 			break;
 		case OP_AND:
 			byte mem = ram [addrAm];
-
 			acc = acc & mem;
-
 			if(!acc)			status |= StatusFlag_Zero;
 			if(acc & (1 << 7))  status |= StatusFlag_Negative;
-
-			// update pc
-
 			break;
+		case OP_BIT:
+			byte mem = ram [addrAm];
+			byte test = mem & acc;
+			if(!test) status |= StatusFlag_Zero;
+			if(test & (1 << 6))	status |= StatusFlag_Overflow;
+			else				status &= ~StatusFlag_Overflow;
+			if(test & (1 << 7))	status |= StatusFlag_Negative;
+			else				status &= ~StatusFlag_Negative;
+			break;
+		case OP_CMP:
+			byte mem = ram[addrAm];
+			byte diff = acc - mem;
+			if(acc >= mem) status |= StatusFlag_Carry;
+			if(acc == mem) status |= StatusFlag_Zero;
+			if(diff & (1 << 7))	status |= StatusFlag_Negative;
+			else				status &= ~StatusFlag_Negative;
+			break;
+		case OP_CPX:
+			byte mem = ram[addrAm];
+			byte diff = iX - mem;
+			if(iX >= mem) status |= StatusFlag_Carry;
+			if(iX == mem) status |= StatusFlag_Zero;
+			if(diff & (1 << 7))	status |= StatusFlag_Negative;
+			else				status &= ~StatusFlag_Negative;
+			break;
+		case OP_CPY:
+			byte mem = ram[addrAm];
+			byte diff = iY - mem;
+			if(iY >= mem) status |= StatusFlag_Carry;
+			if(iY == mem) status |= StatusFlag_Zero;
+			if(diff & (1 << 7))	status |= StatusFlag_Negative;
+			else				status &= ~StatusFlag_Negative;
+			break;
+		case OP_EOR:
+			byte mem = ram[addrAm];
+			acc ^= mem;
+			if(!acc) status |= StatusFlag_Zero;
+			if(acc & (1 << 7))	status |= StatusFlag_Negative;
+			else					status &= ~StatusFlag_Negative;
+			break;
+		case OP_LDA:
+			acc = ram[addrAm];
+			if(!acc) status |= StatusFlag_Zero;
+			if(acc & (1 << 7))	status |= StatusFlag_Negative;
+			else					status &= ~StatusFlag_Negative;
+			break;
+		case OP_LDX:
+			iX = ram[addrAm];
+			if(!iX) status |= StatusFlag_Zero;
+			if(iX & (1 << 7))	status |= StatusFlag_Negative;
+			else					status &= ~StatusFlag_Negative;
+			break;
+		case OP_LDY:
+			iY = ram[addrAm];
+			if(!iY) status |= StatusFlag_Zero;
+			if(iY & (1 << 7))	status |= StatusFlag_Negative;
+			else					status &= ~StatusFlag_Negative;
+			break;
+		case OP_ORA:
+			acc |= ram[addrAm];
+			if(!acc) status |= StatusFlag_Zero;
+			if(acc & (1 << 7))	status |= StatusFlag_Negative;
+			else					status &= ~StatusFlag_Negative;
+			break;
+		case OP_SBC:
+			byte mem = ram [addrAm];
+			byte negMem = ~mem + 1; // twos complement
+			half sum = (half)acc + (half)negMem + (status & StatusFlag_Carry) ? 1 : 0;
+			acc = (byte)sum;
+			if(sum > 0xFF)		status |= StatusFlag_Carry;
+			if(!acc)			status |= StatusFlag_Zero;
+			if(acc & (1 << 7))  status |= StatusFlag_Negative;
+			break;
+
+		// one mem read and one mem write, or none
+
 		case OP_ASL:
 			byte val = insti.am == AM_Acc ? acc : ram [addrAm];
-
 			if(val & (1 << 7))	status |= StatusFlag_Carry;
 			else				status &= ~StatusFlag_Carry;
-
 			val <<= 1;
-
 			if(!val)			status |= StatusFlag_Zero;
 			if(val & (1 << 7))  status |= StatusFlag_Negative;
-
 			if(insti.am == AM_Acc)	acc = val;
 			else					ram [addrAm] = val;
-
-			// update pc
-
 			break;
+		case OP_LSR:
+			byte val = insti.am == AM_Acc ? acc : ram[addrAm];
+			if(val & 1) status |= StatusFlag_Carry;
+			else	status &= ~StatusFlag_Carry;
+			val >> 1;
+			if(!val) status |= StatusFlag_Zero;
+			// negative: Set if bit 7 of the result is set ???
+			if(insti.am == AM_Acc) acc = val;
+			else ram[addrAm] = val;
+			break;
+		case OP_ROL:
+			byte val = insti.am == AM_Acc ? acc : ram[addrAm];
+			bool oldBitSeven = (val & (1 << 7)) ? true : false;
+			val << 1;
+			if(status & StatusFlag_Carry) val |= 1;
+			if(oldBitSeven) status |= StatusFlag_Carry;
+			else status &= ~StatusFlag_Carry;
+			if(!val) status |= StatusFlag_Zero;
+			if(insti.am == AM_Acc) acc = val;
+			else ram[addrAm] = val;
+			break;
+		case OP_ROR:
+			byte val = insti.am == AM_Acc ? acc : ram[addrAm];
+			bool oldBitZero = (val & 1) ? true : false;
+			val >> 1;
+			if(status & StatusFlag_Carry) val |= (1 << 7);
+			if(oldBitZero) status |= StatusFlag_Carry;
+			else status &= ~StatusFlag_Carry;
+			if(!val) status |= StatusFlag_Zero;
+			if(insti.am == AM_Acc) acc = val;
+			else ram[addrAm] = val;
+			break;
+
+		// one mem read and one mem write
+
+		case OP_DEC:
+			byte mem = ram[addrAm];
+			byte result = mem - 1;
+			if(!result) status |= StatusFlag_Zero;
+			if(result & (1 << 7))	status |= StatusFlag_Negative;
+			else					status &= ~StatusFlag_Negative;
+			ram[addrAm] = result;
+			break;
+		case OP_INC:
+			byte mem = ram[addrAm];
+			byte result = mem + 1;
+			if(!result) status |= StatusFlag_Zero;
+			if(result & (1 << 7))	status |= StatusFlag_Negative;
+			else					status &= ~StatusFlag_Negative;
+			ram[addrAm] = result;
+			break;
+
+		// none, break cycles
+
 		case OP_BCC:
 			if(!(status & StatusFlag_Carry)) pc = addrAm;
 			else pc += 1;
@@ -161,21 +276,6 @@ private:
 		case OP_BEQ:
 			if(status & StatusFlag_Zero) pc = addrAm;
 			else pc += 1;
-			break;
-		case OP_BIT:
-			byte mem = ram [addrAm];
-			byte test = mem & acc;
-
-			if(!test) status |= StatusFlag_Zero;
-
-			if(val & (1 << 6))	status |= StatusFlag_Overflow;
-			else				status &= ~StatusFlag_Overflow;
-
-			if(val & (1 << 7))	status |= StatusFlag_Negative;
-			else				status &= ~StatusFlag_Negative;
-
-			// update pc
-
 			break;
 		case OP_BMI:
 			if(status & StatusFlag_Negative) pc = addrAm;
@@ -189,13 +289,6 @@ private:
 			if(!(status & StatusFlag_Negative)) pc = addrAm;
 			else pc += 1;
 			break;
-		case OP_BRK:
-			ram[sp] = pc;
-			ram[sp - 1] = status;
-			sp -= 2;
-			status |= StatusFlag_PushSource;
-			pc = pIRQHandler();
-			break;
 		case OP_BVC:
 			if(!(status & StatusFlag_Overflow)) pc = addrAm;
 			else pc += 1;
@@ -204,345 +297,154 @@ private:
 			if(status & StatusFlag_Overflow) pc = addrAm;
 			else pc += 1;
 			break;
+
+		// none
+
 		case OP_CLC:
 			status &= ~StatusFlag_Carry;
-			// update pc
 			break;
 		case OP_CLD:
 			status &= ~StatusFlag_Decimal;
-			// update pc
 			break;
 		case OP_CLI:
 			status &= ~StatusFlag_InteruptDisable;
-			// update pc
 			break;
 		case OP_CLV:
 			status &= ~StatusFlag_Overflow;
-			// update pc
-			break;
-		case OP_CMP:
-			byte mem = ram[addrAm];
-			byte diff = acc - mem;
-
-			if(acc >= mem) status |= StatusFlag_Carry;
-			if(acc == mem) status |= StatusFlag_Zero;
-
-			if(diff & (1 << 7))	status |= StatusFlag_Negative;
-			else				status &= ~StatusFlag_Negative;
-
-			// update pc
-
-			break;
-		case OP_CPX:
-			byte mem = ram[addrAm];
-			byte diff = iX - mem;
-
-			if(iX >= mem) status |= StatusFlag_Carry;
-			if(iX == mem) status |= StatusFlag_Zero;
-
-			if(diff & (1 << 7))	status |= StatusFlag_Negative;
-			else				status &= ~StatusFlag_Negative;
-
-			// update pc
-
-			break;
-		case OP_CPY:
-			byte mem = ram[addrAm];
-			byte diff = iY - mem;
-
-			if(iY >= mem) status |= StatusFlag_Carry;
-			if(iY == mem) status |= StatusFlag_Zero;
-
-			if(diff & (1 << 7))	status |= StatusFlag_Negative;
-			else				status &= ~StatusFlag_Negative;
-
-			// update pc
-
-			break;
-		case OP_DEC:
-			byte mem = ram[addrAm];
-			byte result = mem - 1;
-
-			if(!result) status |= StatusFlag_Zero;
-
-			if(result & (1 << 7))	status |= StatusFlag_Negative;
-			else					status &= ~StatusFlag_Negative;
-
-			ram[addrAm] = result;
-
-			// update pc
 			break;
 		case OP_DEX:
 			byte val = iX;
 			byte result = val - 1;
-
 			if(!result) status |= StatusFlag_Zero;
-
 			if(result & (1 << 7))	status |= StatusFlag_Negative;
 			else					status &= ~StatusFlag_Negative;
-
 			iX = result;
-
-			// update pc
 			break;
 		case OP_DEY:
 			byte val = iY;
 			byte result = val - 1;
-
 			if(!result) status |= StatusFlag_Zero;
-
 			if(result & (1 << 7))	status |= StatusFlag_Negative;
 			else					status &= ~StatusFlag_Negative;
-
 			iY = result;
-
-			// update pc
-			break;
-		case OP_EOR:
-			byte mem = ram[addrAm];
-			acc ^= mem;
-
-			if(!acc) status |= StatusFlag_Zero;
-
-			if(acc & (1 << 7))	status |= StatusFlag_Negative;
-			else					status &= ~StatusFlag_Negative;
-
-			// update pc
-			break;
-		case OP_INC:
-			byte mem = ram[addrAm];
-			byte result = mem + 1;
-
-			if(!result) status |= StatusFlag_Zero;
-
-			if(result & (1 << 7))	status |= StatusFlag_Negative;
-			else					status &= ~StatusFlag_Negative;
-
-			ram[addrAm] = result;
-
-			// update pc
 			break;
 		case OP_INX:
 			byte val = iX;
 			byte result = val + 1;
-
 			if(!result) status |= StatusFlag_Zero;
-
 			if(result & (1 << 7))	status |= StatusFlag_Negative;
 			else					status &= ~StatusFlag_Negative;
-
 			iX = result;
-
-			// update pc
 			break;
 		case OP_INY:
 			byte val = iY;
 			byte result = val + 1;
-
 			if(!result) status |= StatusFlag_Zero;
-
 			if(result & (1 << 7))	status |= StatusFlag_Negative;
 			else					status &= ~StatusFlag_Negative;
-
 			iY = result;
-
-			// update pc
-			break;
-		case OP_JMP:
-			pc = addrAm;
-			break;
-		case OP_JSR:
-			ram[sp] = pc;
-			sp--;
-			pc = addrAm;
-			break;
-		case OP_LDA:
-			acc = ram[addrAm];
-
-			if(!acc) status |= StatusFlag_Zero;
-
-			if(acc & (1 << 7))	status |= StatusFlag_Negative;
-			else					status &= ~StatusFlag_Negative;
-
-			//updatepc
-			break;
-		case OP_LDX:
-			iX = ram[addrAm];
-
-			if(!iX) status |= StatusFlag_Zero;
-
-			if(iX & (1 << 7))	status |= StatusFlag_Negative;
-			else					status &= ~StatusFlag_Negative;
-
-			//updatepc
-			break;
-		case OP_LDY:
-			iY = ram[addrAm];
-
-			if(!iY) status |= StatusFlag_Zero;
-
-			if(iY & (1 << 7))	status |= StatusFlag_Negative;
-			else					status &= ~StatusFlag_Negative;
-
-			//updatepc
-			break;
-		case OP_LSR:
-			byte val = insti.am == AM_Acc ? acc : ram[addrAm];
-
-			if(val & 1) status |= StatusFlag_Carry;
-			else	status &= ~StatusFlag_Carry;
-
-			val >> 1;
-
-			if(!val) status |= StatusFlag_Zero;
-
-			// negative: Set if bit 7 of the result is set ???
-
-			if(insti.am == AM_Acc) acc = val;
-			else ram[addrAm] = val;
-
-			//updatepc
 			break;
 		case OP_NOP:
-			//updatepc
 			break;
-		case OP_ORA:
-			acc |= ram[addrAm];
-
-			if(!acc) status |= StatusFlag_Zero;
-
-			if(acc & (1 << 7))	status |= StatusFlag_Negative;
-			else					status &= ~StatusFlag_Negative;
-
-			//updatepc
+		case OP_SEC:
+			status |= StatusFlag_Carry;
 			break;
+		case OP_SED:
+			status |= StatusFlag_Decimal;
+			break;
+		case OP_SEI:
+			status |= StatusFlag_InteruptDisable;
+			break;
+		case OP_TAX:
+			iX = acc;
+			break;
+		case OP_TAY:
+			iY = acc;
+			break;
+		case OP_TSX:
+			iX = sp;
+			break;
+		case OP_TXA:
+			acc = iX;
+			break;
+		case OP_TXS:
+			sp = iX;
+			break;
+		case OP_TYA:
+			acc = iY;
+			break;
+
+		// mem write
+		
 		case OP_PHA:
 			ram[sp] = acc;
 			sp--;
-			//pc
 			break;
 		case OP_PHP:
 			ram[sp] = status;
 			sp--;
-			//pc
 			break;
+
+		// mem read
+
 		case OP_PLA:
 			sp++;
 			acc = ram[sp];
-			//poc
 			break;
 		case OP_PLP:
 			sp++;
 			status = ram[sp];
-			//pc
 			break;
-		case OP_ROL:
-			byte val = insti.am == AM_Acc ? acc : ram[addrAm];
-			bool oldBitSeven = (val & (1 << 7)) ? true : false;
-			val << 1;
 
-			if(status & StatusFlag_Carry) val |= 1;
+		// two mem reads
 
-			if(oldBitSeven) status |= StatusFlag_Carry;
-			else status &= ~StatusFlag_Carry;
-
-			if(!val) status |= StatusFlag_Zero;
-
-			if(insti.am == AM_Acc) acc = val;
-			else ram[addrAm] = val;
-			//pc
-			break;
-		case OP_ROR:
-			byte val = insti.am == AM_Acc ? acc : ram[addrAm];
-			bool oldBitZero = (val & 1) ? true : false;
-			val >> 1;
-
-			if(status & StatusFlag_Carry) val |= (1 << 7);
-
-			if(oldBitZero) status |= StatusFlag_Carry;
-			else status &= ~StatusFlag_Carry;
-
-			if(!val) status |= StatusFlag_Zero;
-
-			if(insti.am == AM_Acc) acc = val;
-			else ram[addrAm] = val;
-			//pc
-			break;
 		case OP_RTI:
 			sp++;
 			status = ram[sp];
 			sp++;
 			pc = ram[sp];
-			//pc
 			break;
 		case OP_RTS:
 			sp++;
-			pc = ram[sp];
-			//pc
+			pc = ram[sp]; // ??? why is this the same cycles as rti?
 			break;
-		case OP_SBC:
-			byte mem = ram [addrAm];
-			byte negMem = ~mem + 1; // twos complement
 
-			half sum = (half)acc + (half)negMem + (status & StatusFlag_Carry) ? 1 : 0;
+		// one mem write
 
-			acc = (byte)sum;
-
-			if(sum > 0xFF)		status |= StatusFlag_Carry;
-			if(!acc)			status |= StatusFlag_Zero;
-			if(acc & (1 << 7))  status |= StatusFlag_Negative;
-
-			// update pc
-
-			break;
-		case OP_SEC:
-			status |= StatusFlag_Carry;
-			//pc
-			break;
-		case OP_SED:
-			status |= StatusFlag_Decimal;
-			//pc
-			break;
-		case OP_SEI:
-			status |= StatusFlag_InteruptDisable;
-			//pc
-			break;
 		case OP_STA:
 			ram[addrAm] = acc;
-			//pc
 			break;
 		case OP_STX:
 			ram[addrAm] = iX;
-			//pc
 			break;
 		case OP_STY:
 			ram[addrAm] = iY;
-			//pc
 			break;
-		case OP_TAX:
-			iX = acc;
-			//pc
+
+		// free?
+		
+		case OP_JMP:
+			pc = addrAm;
 			break;
-		case OP_TAY:
-			iY = acc;
-			//pc
+
+		// one read. why diff?
+
+		case OP_JSR:
+			ram[sp] = pc;
+			sp--;
+			pc = addrAm;
 			break;
-		case OP_TSX:
-			iX = sp;
-			//pc
+		
+		// 3 reads
+		
+		case OP_BRK:
+			ram[sp] = pc;
+			ram[sp - 1] = status;
+			sp -= 2;
+			status |= StatusFlag_PushSource;
+			pc = pIRQHandler();
 			break;
-		case OP_TXA:
-			acc = iX;
-			//pc
-			break;
-		case OP_TXS:
-			sp = iX;
-			//PC
-			break;
-		case OP_TYA:
-			acc = iY;
-			//pc
-			break;
+
 		default:
 			assert(false);
 			break;
@@ -561,34 +463,34 @@ private:
 			return pc + 1;
 			break;
 		case AM_ZP:
-			return ram[pc + 1];
+			return ram[pc + 1]; // one read
 			break;
 		case AM_ZPX:
-			return (ram[pc + 1] + iX) % 0x100;
+			return (ram[pc + 1] + iX) % 0x100; // one read and an alu op
 			break;
 		case AM_ZPY:
-			return (ram[pc + 1] + iY) % 0x100;
+			return (ram[pc + 1] + iY) % 0x100; // one read and an alu op
 			break;
 		case AM_Rel:
-			return pc + ((sbyte)ram[pc + 1]) + 2;
+			return pc + ((sbyte)ram[pc + 1]) + 2; // one read and alu op (only if jmp) . why pgx matter?
 			break;
 		case AM_Abs:
-			return halfAt(pc + 1);
+			return halfAt(pc + 1); // two reads
 			break;
 		case AM_AbsX:
-			return halfAt(pc + 1) + iX;
+			return halfAt(pc + 1) + iX; // two reads and alu op (why pgx cross matter?)
 			break;
 		case AM_AbsY:
-			return halfAt(pc + 1) + iY;
+			return halfAt(pc + 1) + iY; // two reads and alu op (why pgx cross matter?)
 			break;
 		case AM_Ind:
-			return halfAt(halfAt(pc + 1));
+			return halfAt(halfAt(pc + 1)); // four reads
 			break;
 		case AM_IndX:
-			return (ram[pc + 1] + iX) % 0x100;
+			return (ram[pc + 1] + iX) % 0x100; //one read and alu op
 			break;
 		case AM_IndY:
-			return halfAt(ram[pc + 1]) + iY;
+			return halfAt(ram[pc + 1]) + iY; // three reads and alu op (why less expensive than indx?) why page cross matter
 			break;
 		default:
 			break;

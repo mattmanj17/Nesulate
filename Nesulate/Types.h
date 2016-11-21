@@ -19,3 +19,13 @@ typedef unsigned __int64 u64;
 typedef u64 dword;
 
 #define KB 1024
+
+half HalfAt(void* ptr)
+{
+	return *(half*)ptr;
+}
+
+word WordAt(void* ptr)
+{
+	return *(word*)ptr;
+}

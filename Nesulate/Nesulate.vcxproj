@@ -80,6 +80,7 @@
     <ClInclude Include="2A03.h" />
     <ClInclude Include="2C03.h" />
     <ClInclude Include="6502.h" />
+    <ClInclude Include="nesfile.h" />
     <ClInclude Include="Types.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
